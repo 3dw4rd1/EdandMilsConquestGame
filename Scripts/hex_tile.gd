@@ -50,13 +50,13 @@ func set_player_color(player_id: int) -> void:
 		0:
 			current_color = Color.GRAY  # Neutral/unclaimed
 		1:
-			current_color = Color.BLUE  # Player 1
+			current_color = Color('#0A2463')  # Player 1
 		2:
-			current_color = Color.RED   # Player 2
+			current_color = Color('845348')   # Player 2
 		3:
-			current_color = Color.GREEN # Player 3
+			current_color = Color('143109') # Player 3
 		4:
-			current_color = Color.YELLOW # Player 4
+			current_color = Color('D17B0F') # Player 4
 		_:
 			current_color = Color.WHITE
 
@@ -67,15 +67,15 @@ func set_biome_color() -> void:
 	
 	match tile_properties.biome:
 		TileProperties.BiomeType.FOREST:
-			current_color = Color.DARK_GREEN
+			current_color = Color("#69A97D")
 		TileProperties.BiomeType.MOUNTAIN:
-			current_color = Color.DARK_GRAY
+			current_color = Color("#96AE9E")
 		TileProperties.BiomeType.SNOW:
-			current_color = Color.WHITE
+			current_color = Color("#E4E7F1")
 		TileProperties.BiomeType.WATER:
-			current_color = Color.DARK_BLUE
+			current_color = Color("#3CA5B8")
 		TileProperties.BiomeType.PLAINS:
-			current_color = Color.YELLOW_GREEN
+			current_color = Color("#DEF294")
 
 # Get the tile's properties
 func get_tile_properties() -> TileProperties:

@@ -9,7 +9,7 @@ const HEX_TILE_SCENE = preload("res://Scenes/hex_tile.tscn")
 # Grid configuration - NOW BIGGER MAP!
 const GRID_WIDTH: int = 50  # Changed from 10 to 50
 const GRID_HEIGHT: int = 20  # Changed from 10 to 20
-const TILE_SPACING: float = 90.0  # Distance between tile centers (slightly less than 2*HEX_SIZE for overlap)
+const TILE_SPACING: float = 89.0  # Distance between tile centers (slightly less than 2*HEX_SIZE for overlap)
 
 # References
 @onready var game_manager: GameManager = $GameManager
