@@ -1,0 +1,11 @@
+﻿# Godot 4.x specific ignores
+.godot/
+*.import
+*.translation
+
+# OS/Editor specific
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~

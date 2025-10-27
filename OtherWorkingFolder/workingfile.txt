@@ -1,0 +1,62 @@
+Start with the Tile Resource - just the base properties (biome, base stats, etc.)
+Then the visual hexagon scene - what you see on the board
+Later we can build the Game Manager that tracks ownership and calculates totals
+
+Should I go ahead and create the first script for the Tile Resource?
+What base stats do you want to include? So far you mentioned:
+
+Biome type
+Population (growth rate?)
+Attack rating
+Defense rating
+
+
+Perfect! I've created the GameManager script. Let me explain what it does:
+Key Features:
+Player Data Structure
+Each player has:
+
+current_population - their total population (starts at 10,000)
+population_growth_rate - base growth rate (starts at 0.8%)
+current_army_size - how many in military
+tiles_owned - array of tiles they control
+
+Main Functions
+Setup:
+
+initialize_game(num_players) - starts a new game with X players
+
+Tile Management:
+
+register_tile(tile) - add tiles to the game
+assign_tile_to_player(tile, player_id) - conquest/claiming
+get_player_tiles(player_id) - get all tiles a player owns
+
+Stats Calculation:
+
+calculate_population_growth_modifier(player_id) - sums tile bonuses
+calculate_total_attack_modifier(player_id) - sums attack from tiles
+calculate_total_defense_modifier(player_id) - sums defense from tiles
+
+Population Management:
+
+update_player_population(player_id) - grows population for one player
+update_all_populations() - grows for all players (call each turn)
+set_player_army_size(player_id, size) - when allocating to military
+
+Turn System:
+
+next_turn() - advances turn and updates all populations
+
+Utility:
+
+get_player_summary(player_id) - returns all stats as a dictionary
+print_all_player_stats() - debug function to see everything
+
+How Population Growth Works:
+Effective Growth = Base Rate (0.8%) + (Tile Bonuses / 100)
+New Population = Current Population × (Effective Growth / 100)
+Signals:
+
+player_stats_changed(player_id) - when stats update (for UI)
+tile_ownership_changed(tile, old_owner, new_owner) - when tiles change hands

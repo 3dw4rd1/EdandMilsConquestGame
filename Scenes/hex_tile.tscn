@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3 uid="uid://bbqk3q5bb3xvl"]
+
+[ext_resource type="Script" uid="uid://dn3n83ywbgyq" path="res://Scripts/hex_tile.gd" id="1_ereql"]
+
+[node name="HexTile" type="Node2D"]
+script = ExtResource("1_ereql")
+
+[node name="HexPolygon" type="Polygon2D" parent="."]
+color = Color(0.7562101, 0.13626239, 0.29831138, 1)

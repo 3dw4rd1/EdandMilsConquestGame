@@ -1,0 +1,70 @@
+[gd_scene load_steps=5 format=3 uid="uid://k1dx0mbjtdnv"]
+
+[ext_resource type="Script" uid="uid://y8nvkcbggs68" path="res://Scripts/game_scene.gd" id="1_8mtfu"]
+[ext_resource type="Script" uid="uid://dpgf5t2flpp3u" path="res://Scripts/game_manager.gd" id="1_bkcmx"]
+[ext_resource type="Script" uid="uid://b25557x3362b6" path="res://Scripts/camera_controller.gd" id="3_wb2by"]
+[ext_resource type="Script" uid="uid://bb4efqsygo7yc" path="res://Scripts/hud.gd" id="4_syfkn"]
+
+[node name="GameScene" type="Node2D"]
+script = ExtResource("1_8mtfu")
+
+[node name="GameManager" type="Node" parent="."]
+script = ExtResource("1_bkcmx")
+
+[node name="TileContainer" type="Node2D" parent="."]
+
+[node name="Camera2D" type="Camera2D" parent="."]
+script = ExtResource("3_wb2by")
+
+[node name="HUD" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("4_syfkn")
+
+[node name="Panel" type="Panel" parent="HUD"]
+custom_minimum_size = Vector2(300, 400)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = 900.0
+offset_top = -100.0
+offset_right = 1500.0
+offset_bottom = 700.0
+grow_horizontal = 0
+metadata/_edit_use_anchors_ = true
+
+[node name="MarginContainer" type="MarginContainer" parent="HUD/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HUD/Panel/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TurnLabel" type="Label" parent="HUD/Panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Turn: 0"
+horizontal_alignment = 1
+
+[node name="PlayerStatsContainer" type="VBoxContainer" parent="HUD/Panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 15
+
+[node name="NextTurnButton" type="Button" parent="HUD/Panel/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "Next Turn"
