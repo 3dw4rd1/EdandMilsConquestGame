@@ -1,0 +1,447 @@
+Start with the Tile Resource - just the base properties (biome, base stats, etc.)
+Then the visual hexagon scene - what you see on the board
+Later we can build the Game Manager that tracks ownership and calculates totals
+
+Should I go ahead and create the first script for the Tile Resource?
+What base stats do you want to include? So far you mentioned:
+
+Biome type
+Population (growth rate?)
+Attack rating
+Defense rating
+
+
+Perfect! I've created the GameManager script. Let me explain what it does:
+Key Features:
+Player Data Structure
+Each player has:
+
+current_population - their total population (starts at 10,000)
+population_growth_rate - base growth rate (starts at 0.8%)
+current_army_size - how many in military
+tiles_owned - array of tiles they control
+
+Main Functions
+Setup:
+
+initialize_game(num_players) - starts a new game with X players
+
+Tile Management:
+
+register_tile(tile) - add tiles to the game
+assign_tile_to_player(tile, player_id) - conquest/claiming
+get_player_tiles(player_id) - get all tiles a player owns
+
+Stats Calculation:
+
+calculate_population_growth_modifier(player_id) - sums tile bonuses
+calculate_total_attack_modifier(player_id) - sums attack from tiles
+calculate_total_defense_modifier(player_id) - sums defense from tiles
+
+Population Management:
+
+update_player_population(player_id) - grows population for one player
+update_all_populations() - grows for all players (call each turn)
+set_player_army_size(player_id, size) - when allocating to military
+
+Turn System:
+
+next_turn() - advances turn and updates all populations
+
+Utility:
+
+get_player_summary(player_id) - returns all stats as a dictionary
+print_all_player_stats() - debug function to see everything
+
+How Population Growth Works:
+Effective Growth = Base Rate (0.8%) + (Tile Bonuses / 100)
+New Population = Current Population × (Effective Growth / 100)
+Signals:
+
+player_stats_changed(player_id) - when stats update (for UI)
+tile_ownership_changed(tile, old_owner, new_owner) - when tiles change hands
+
+
+# Map Generator System Architecture
+
+## System Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        GAME START                                │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  game_scene.gd - _ready()                                        │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │ 1. Create MapGenerator instance                             │ │
+│  │ 2. Initialize GameManager (4 players)                       │ │
+│  │ 3. Generate map DATA (separate from visuals)                │ │
+│  └────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  MapGenerator.generate_map()                                     │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │ FastNoiseLite Setup:                                        │ │
+│  │   • Seed: Random or fixed                                   │ │
+│  │   • Type: Perlin (smooth terrain)                           │ │
+│  │   • Frequency: 0.05 (biome size)                            │ │
+│  │   • Fractals: 3 octaves (detail layers)                     │ │
+│  │                                                              │ │
+│  │ For each tile position (x, y):                              │ │
+│  │   1. Get noise value (-1.0 to 1.0)                          │ │
+│  │   2. Determine biome based on thresholds                    │ │
+│  │   3. Create TileData with properties                        │ │
+│  │   4. Store in tile_data_grid dictionary                     │ │
+│  │                                                              │ │
+│  │ Result: 1000 TileData objects in memory                     │ │
+│  └────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  Noise Value → Biome Mapping                                     │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                              │ │
+│  │  Noise Value        Biome        Percentage                 │ │
+│  │  ─────────────────────────────────────────────              │ │
+│  │  < -0.3          → WATER         ~25%                       │ │
+│  │  -0.3 to -0.1    → PLAINS        ~35%                       │ │
+│  │  -0.1 to 0.3     → FOREST        ~25%                       │ │
+│  │  0.3 to 0.5      → MOUNTAIN      ~15%                       │ │
+│  │  > 0.5           → SNOW          ~10% (with randomness)     │ │
+│  │                                                              │ │
+│  └────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  game_scene.gd - generate_tile_grid()                            │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │ For each TileData in tile_data_grid:                        │ │
+│  │   1. Instantiate HexTile scene (visual)                     │ │
+│  │   2. Calculate hex grid position                            │ │
+│  │   3. Set tile.tile_properties from TileData                 │ │
+│  │   4. Set visual color based on biome                        │ │
+│  │   5. Disable processing (optimization)                      │ │
+│  │   6. Add to scene                                           │ │
+│  │   7. Store in grid_to_tile lookup                           │ │
+│  │                                                              │ │
+│  │ Result: 1000 visual HexTile nodes on screen                 │ │
+│  └────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  MapGenerator.get_spawn_positions(4)                             │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │ Define 4 quadrants (corners):                               │ │
+│  │   • Top-left                                                │ │
+│  │   • Top-right                                               │ │
+│  │   • Bottom-left                                             │ │
+│  │   • Bottom-right                                            │ │
+│  │                                                              │ │
+│  │ For each quadrant:                                          │ │
+│  │   1. Random search (max 50 attempts)                        │ │
+│  │   2. Find Plains or Forest tile                             │ │
+│  │   3. Check min 10 tiles from other spawns                   │ │
+│  │   4. Return position                                        │ │
+│  │                                                              │ │
+│  │ Result: 4 Vector2i positions                                │ │
+│  └────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  game_scene.gd - assign_starting_tiles()                         │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │ For each player (1-4):                                      │ │
+│  │   1. Get spawn position from list                           │ │
+│  │   2. Find visual tile at that position                      │ │
+│  │   3. Assign to player via GameManager                       │ │
+│  │   4. Update tile color to player color                      │ │
+│  │                                                              │ │
+│  │ Result: 4 players with starting tiles                       │ │
+│  └────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                      GAME READY TO PLAY                          │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Data Structure Relationships
+
+```
+MapGenerator
+    │
+    ├── tile_data_grid: Dictionary
+    │       │
+    │       └── Key: Vector2i(x, y)
+    │           Value: TileData
+    │                   ├── grid_position: Vector2i
+    │                   ├── world_position: Vector2
+    │                   ├── biome: BiomeType enum
+    │                   ├── properties: TileProperties
+    │                   │       ├── tile_id: String
+    │                   │       ├── biome: BiomeType
+    │                   │       ├── base_population_growth: float
+    │                   │       ├── base_attack: float
+    │                   │       └── base_defense: float
+    │                   └── owner_id: int (-1 or 1-4)
+    │
+    └── noise: FastNoiseLite
+            ├── seed: int
+            ├── type: Perlin
+            ├── frequency: 0.05
+            └── fractal settings
+
+
+game_scene
+    │
+    ├── tiles: Array[HexTile] (all visual tiles)
+    │
+    ├── grid_to_tile: Dictionary
+    │       └── Key: Vector2i → Value: HexTile (for quick lookup)
+    │
+    └── tile_data_grid: Dictionary (reference to MapGenerator data)
+
+
+GameManager
+    │
+    ├── players: Dictionary
+    │       └── Key: player_id → Value: PlayerData
+    │                                    ├── current_population
+    │                                    ├── population_growth_rate
+    │                                    ├── current_army_size
+    │                                    └── tiles_owned: Array[HexTile]
+    │
+    └── all_tiles: Array[HexTile] (all tiles in game)
+
+
+HexTile (visual node)
+	├── position: Vector2 (where it's drawn)
+	├── tile_properties: TileProperties (reference to data)
+	├── current_color: Color (visual display)
+	└── hex_polygon: Polygon2D (the shape you see)
+```
+
+---
+
+## Memory Layout
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  PERMANENT DATA (Always in Memory)                              │
+│                                                                  │
+│  tile_data_grid: {                                               │
+│    Vector2i(0,0): TileData {                                     │
+│      biome: PLAINS                                               │
+│      properties: TileProperties { growth: 8, attack: 5... }     │
+│      owner_id: 1                                                 │
+│    },                                                            │
+│    Vector2i(0,1): TileData { ... },                             │
+│    ... 1000 entries ...                                          │
+│  }                                                               │
+│                                                                  │
+│  Size: ~100-200 KB (very small!)                                │
+└─────────────────────────────────────────────────────────────────┘
+							  ↕
+						 REFERENCES
+							  ↕
+┌─────────────────────────────────────────────────────────────────┐
+│  VISUAL NODES (Can be destroyed/recreated)                      │
+│                                                                  │
+│  HexTile at (0,0):                                               │
+│    ├── Reads data from tile_data_grid[Vector2i(0,0)]            │
+│    ├── Displays color based on biome                            │
+│    └── Position: Vector2(0, 0)                                  │
+│                                                                  │
+│  HexTile at (0,1): ...                                           │
+│  ... 1000 nodes ...                                              │
+│                                                                  │
+│  Size: ~5-10 MB (larger due to nodes/rendering)                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Key Insight**: The data is tiny! The visuals are what take memory.
+If we destroy visuals, data remains safe.
+
+---
+
+## Hex Grid Coordinate System
+
+```
+Flat-Top Hexagon Orientation:
+
+	 (0,0)     (1,0)     (2,0)     (3,0)
+		___       ___       ___       ___
+	   /   \     /   \     /   \     /   \
+	  /     \___/     \___/     \___/     \
+	  \     /   \     /   \     /   \     /
+	   \___/ (0,1)\___/ (1,1)\___/ (2,1)\___/
+	   /   \     /   \     /   \     /   \
+	  /     \___/     \___/     \___/     \
+	  \     /   \     /   \     /   \     /
+	   \___/ (0,2)\___/ (1,2)\___/ (2,2)\___/
+		   \     /   \     /   \     /   \
+			\___/     \___/     \___/     \___
+
+Note: Odd rows (1, 3, 5...) are offset right by half tile width
+
+World Position Calculation:
+  x_offset = col * TILE_SPACING
+  y_offset = row * TILE_SPACING * 0.75
+  if row % 2 == 1:
+	  x_offset += TILE_SPACING * 0.5
+```
+
+---
+
+## Optimization Strategy
+
+```
+BEFORE (Without Optimizations):
+  1000 tiles × constantly processing = SLOW
+  [Tile] → _process() called 60 times/second
+  [Tile] → _process() called 60 times/second
+  [Tile] → _process() called 60 times/second
+  ... × 1000 = 60,000 process calls per second!
+
+
+AFTER (With Optimizations):
+  Most tiles: set_process(false) = FAST
+  [Tile] → (sleeping)
+  [Tile] → (sleeping)
+  [Tile] → (sleeping)
+  [Player Tile] → _process() called (only if needed)
+  ... maybe 10-20 active tiles = 600-1200 calls per second
+
+
+FUTURE (Advanced Optimization):
+  Chunk System:
+	┌─────────┬─────────┬─────────┐
+	│ Chunk 1 │ Chunk 2 │ Chunk 3 │  ← Only load chunks
+	├─────────┼─────────┼─────────┤     near camera
+	│ Chunk 4 │ Chunk 5 │ Chunk 6 │
+	└─────────┴─────────┴─────────┘
+  
+  Visible chunks → Load tiles
+  Hidden chunks → Unload tiles (but data remains!)
+```
+
+---
+
+## Biome Statistics Distribution
+
+```
+Target Distribution (percentages):
+
+			PLAINS (35%)
+		 ████████████████
+		  FOREST (25%)
+		 ████████████
+		  WATER (25%)
+		 ████████████
+		MOUNTAIN (15%)
+		 ███████
+		  SNOW (10%)
+		 █████
+
+Actual (from noise thresholds):
+  Water:    < -0.3    →  ~25%
+  Plains:   -0.3 to -0.1  →  ~35%
+  Forest:   -0.1 to 0.3   →  ~25%
+  Mountain:  0.3 to 0.5   →  ~15%
+  Snow:      > 0.5 (×30%) →  ~10%
+```
+
+---
+
+## Player Spawn Quadrants (4 Players)
+
+```
+50 columns × 20 rows map:
+
+┌─────────────────────────────┬─────────────────────────────┐
+│                             │                             │
+│     QUADRANT 1              │     QUADRANT 2              │
+│     (Top-Left)              │     (Top-Right)             │
+│     Cols: 0-12              │     Cols: 37-49             │
+│     Rows: 0-4               │     Rows: 0-4               │
+│                             │                             │
+│       🔵 Player 1            │            Player 2 🔴      │
+│       spawns here           │            spawns here      │
+│                             │                             │
+├─────────────────────────────┼─────────────────────────────┤
+│                             │                             │
+│     QUADRANT 3              │     QUADRANT 4              │
+│     (Bottom-Left)           │     (Bottom-Right)          │
+│     Cols: 0-12              │     Cols: 37-49             │
+│     Rows: 15-19             │     Rows: 15-19             │
+│                             │                             │
+│       🟢 Player 3            │            Player 4 🟡      │
+│       spawns here           │            spawns here      │
+│                             │                             │
+└─────────────────────────────┴─────────────────────────────┘
+
+Each player spawns randomly within their quadrant,
+ensuring at least 10 tiles distance from others.
+```
+
+---
+
+## Performance Metrics
+
+```
+EXPECTED PERFORMANCE:
+
+Map Size     Tiles    Memory    FPS (Typical)    FPS (Low-End)
+─────────────────────────────────────────────────────────────
+10×10        100      ~1 MB     60 FPS           60 FPS
+20×20        400      ~3 MB     60 FPS           45-60 FPS
+30×20        600      ~5 MB     60 FPS           30-45 FPS
+50×20        1000     ~8 MB     45-60 FPS        20-30 FPS
+100×50       5000     ~35 MB    20-30 FPS        10-15 FPS
+
+Strategy games typically run well at 30+ FPS.
+60 FPS is ideal but not critical for turn-based gameplay.
+```
+
+---
+
+## File Dependencies
+
+```
+game_scene.gd
+	↓ requires
+MapGenerator (map_generator.gd)
+	↓ creates
+TileData
+	↓ contains
+TileProperties (TileData.gd)
+	↓ has
+BiomeType enum
+
+game_scene.gd
+	↓ instantiates
+HexTile (hex_tile.tscn + hex_tile.gd)
+	↓ references
+TileProperties
+
+game_scene.gd
+	↓ uses
+GameManager (game_manager.gd)
+	↓ tracks
+PlayerData
+	↓ has array of
+HexTile references
+```
+
+---
+
+This architecture ensures:
+✅ Data is separate from visuals (safe stats)
+✅ Easy to optimize (can hide/show tiles)
+✅ Procedural generation (different maps)
+✅ Scalable (can add more features easily)
+✅ Modular (each part independent)

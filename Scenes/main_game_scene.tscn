@@ -29,15 +29,14 @@ script = ExtResource("4_syfkn")
 [node name="Panel" type="Panel" parent="HUD"]
 custom_minimum_size = Vector2(300, 400)
 layout_mode = 1
-anchors_preset = 1
+anchors_preset = -1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = 900.0
+offset_left = 1500.0
 offset_top = -100.0
-offset_right = 1500.0
+offset_right = 2099.9998
 offset_bottom = 700.0
 grow_horizontal = 0
-metadata/_edit_use_anchors_ = true
 
 [node name="MarginContainer" type="MarginContainer" parent="HUD/Panel"]
 layout_mode = 1

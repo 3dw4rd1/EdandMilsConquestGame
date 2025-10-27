@@ -13,4 +13,3 @@ config_version=5
 config/name="Map Conquest Game"
 run/main_scene="uid://pchejcvt72k6"
 config/features=PackedStringArray("4.5", "Forward Plus")
-config/icon="res://icon.svg"

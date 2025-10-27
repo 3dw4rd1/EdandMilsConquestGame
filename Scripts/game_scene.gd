@@ -6,9 +6,9 @@ extends Node2D
 # Preload the hex tile scene
 const HEX_TILE_SCENE = preload("res://Scenes/hex_tile.tscn")
 
-# Grid configuration
-const GRID_WIDTH: int = 10
-const GRID_HEIGHT: int = 10
+# Grid configuration - NOW BIGGER MAP!
+const GRID_WIDTH: int = 50  # Changed from 10 to 50
+const GRID_HEIGHT: int = 20  # Changed from 10 to 20
 const TILE_SPACING: float = 90.0  # Distance between tile centers (slightly less than 2*HEX_SIZE for overlap)
 
 # References
@@ -17,17 +17,32 @@ const TILE_SPACING: float = 90.0  # Distance between tile centers (slightly less
 @onready var hud: Control = $HUD
 @onready var camera: Camera2D = $Camera2D
 
-# Store generated tiles
+# Map generator
+var map_generator: MapGenerator
+
+# Store generated tiles (visuals)
 var tiles: Array[HexTile] = []
 
+# Store tile data separately from visuals
+var tile_data_grid: Dictionary = {}  # Vector2i -> MapGenerator.HexTileData
+
+# Quick lookup: grid position to visual tile
+var grid_to_tile: Dictionary = {}  # Vector2i -> HexTile
+
 func _ready() -> void:
+	# Create map generator
+	map_generator = MapGenerator.new()
+	
 	# Initialize game with 4 players
 	game_manager.initialize_game(4)
 	
-	# Generate the tile grid
+	# Generate the map data (separate from visuals)
+	tile_data_grid = map_generator.generate_map(GRID_WIDTH, GRID_HEIGHT)
+	
+	# Generate the visual tile grid
 	generate_tile_grid()
 	
-	# Assign starting tiles to players
+	# Assign starting tiles to players with smart spawning
 	assign_starting_tiles()
 	
 	# Center camera on the map
@@ -39,55 +54,84 @@ func _ready() -> void:
 	
 	print("Game scene loaded with %d tiles" % tiles.size())
 
-## Generate a grid of hex tiles
+## Generate visual tiles from map data
 func generate_tile_grid() -> void:
-	# Create a simple TileProperties for all tiles (all same biome for MVP)
-	var default_tile_properties = TileProperties.new()
-	default_tile_properties.biome = TileProperties.BiomeType.PLAINS
-	default_tile_properties.base_population_growth = 5.0
-	default_tile_properties.base_attack = 10.0
-	default_tile_properties.base_defense = 10.0
+	print("Generating visual tiles for %dx%d grid..." % [GRID_WIDTH, GRID_HEIGHT])
 	
-	var tile_index = 0
+	var tile_count = 0
 	
-	for row in range(GRID_HEIGHT):
-		for col in range(GRID_WIDTH):
-			# Instantiate hex tile
+	for y in range(GRID_HEIGHT):
+		for x in range(GRID_WIDTH):
+			var grid_pos = Vector2i(x, y)
+			
+			# Get tile data from map generator
+			var tile_data: MapGenerator.HexTileData = tile_data_grid.get(grid_pos)
+			if not tile_data:
+				push_error("Missing tile data at %s" % grid_pos)
+				continue
+			
+			# Instantiate visual hex tile
 			var tile = HEX_TILE_SCENE.instantiate()
 			
-			# Calculate position
-			# Hexagons in flat-top orientation
-			# Offset every other row for hex grid look
-			var x_offset = col * TILE_SPACING
-			var y_offset = row * TILE_SPACING * 0.75  # 0.75 for proper hex vertical spacing
+			# Calculate world position (same hex grid logic as before)
+			var x_offset = x * TILE_SPACING
+			var y_offset = y * TILE_SPACING * 0.75  # 0.75 for proper hex vertical spacing
 			
 			# Offset odd rows to create hex grid pattern
-			if row % 2 == 1:
+			if y % 2 == 1:
 				x_offset += TILE_SPACING * 0.5
 			
 			tile.position = Vector2(x_offset, y_offset)
 			
-			# Set tile properties
-			tile.tile_properties = default_tile_properties
-			tile.tile_properties.tile_id = "tile_%d" % tile_index
+			# Store world position in tile data for reference
+			tile_data.world_position = tile.position
 			
-			# Set neutral color initially
-			tile.set_player_color(0)
+			# Set tile properties from generated data
+			tile.tile_properties = tile_data.properties
+			
+			# Set visual based on biome
+			tile.set_biome_color()
+			
+			# Optimization: Disable processing on neutral tiles (they don't need updates)
+			tile.set_process(false)
+			tile.set_physics_process(false)
 			
 			# Add to scene and track
 			tile_container.add_child(tile)
 			tiles.append(tile)
 			game_manager.register_tile(tile)
 			
-			tile_index += 1
+			# Store in lookup dictionary
+			grid_to_tile[grid_pos] = tile
+			
+			tile_count += 1
+	
+	print("Generated %d visual tiles" % tile_count)
 
-## Assign one starting tile to each player
+## Assign starting tiles to players using smart spawning
 func assign_starting_tiles() -> void:
-	# Give player 1-4 their starting tiles (first 4 tiles)
-	for player_id in range(1, 5):
-		if player_id - 1 < tiles.size():
-			var starting_tile = tiles[player_id - 1]
+	# Get spawn positions from map generator (smart placement in corners)
+	var spawn_positions = map_generator.get_spawn_positions(4)
+	
+	print("Assigning starting tiles to players...")
+	
+	# Assign each player their starting tile
+	for i in range(min(4, spawn_positions.size())):
+		var player_id = i + 1
+		var grid_pos = spawn_positions[i]
+		
+		# Get the visual tile at this position
+		var starting_tile = grid_to_tile.get(grid_pos)
+		
+		if starting_tile:
 			game_manager.assign_tile_to_player(starting_tile, player_id)
+			print("Player %d spawned at %s (%s biome)" % [
+				player_id, 
+				grid_pos,
+				starting_tile.tile_properties.get_biome_name()
+			])
+		else:
+			push_error("Could not find tile at spawn position %s" % grid_pos)
 
 ## Center camera on the map
 func center_camera_on_map() -> void:

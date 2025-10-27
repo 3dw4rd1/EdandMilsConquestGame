@@ -10,8 +10,8 @@ var pan_start_position: Vector2
 
 # Zoom settings
 const ZOOM_MIN: float = 0.3
-const ZOOM_MAX: float = 2.0
-const ZOOM_SPEED: float = 0.1
+const ZOOM_MAX: float = 10.0
+const ZOOM_SPEED: float = 0.05
 
 func _ready() -> void:
 	# Set initial zoom
